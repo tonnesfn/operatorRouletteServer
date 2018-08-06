@@ -26,6 +26,34 @@ def get_player_stats(username):
     else:
         print("Error " + str(r.status_code))
 
+def getRandomOperator(username, role):
+    if role != "atk" and role != "def":
+        print("Invalid role specified!")
+        return ""
+
+    while(True):
+        timeSumMin = 0.0
+        timeSumMinInv = 0.0
+        for operator in operatorStats[username]['operator_records']:
+            timeSumMin = timeSumMin + (operator['stats']['playtime'] / 60)
+            timeSumMinInv = timeSumMinInv + (1 / (operator['stats']['playtime'] / 60))
+        # print("Total played, {} min, inv: {}".format(timeSumMin, timeSumMinInv))
+
+        selector = np.random.rand() * 100
+        sumInv = 0
+        for operator in operatorStats[username]['operator_records']:
+
+            operatorName = operator['operator']['name']
+            operatorTimeMin = operator['stats']['playtime'] / 60
+            operatorPercentage = 100 * (operatorTimeMin) / timeSumMin
+            operatorTimeMinInv = 1 / (operator['stats']['playtime'] / 60)
+            operatorPercentageInv = 100 * ((operatorTimeMinInv) / timeSumMinInv)
+            sumInv = sumInv + operatorPercentageInv
+
+            selector = selector - operatorPercentageInv
+            if selector < 0.0:
+                if operator['operator']['role'] == role:
+                    return operatorName
 
 # This function returns the HTML for the given username
 def getUserString(username):
@@ -34,37 +62,11 @@ def getUserString(username):
     # Check if username statistics exists, and get it if they do not
     if username not in operatorStats.keys():
         get_player_stats(username)
-    else:
-        print(username + " already exists:")
 
-        timeSumMin = 0.0
-        timeSumMinInv = 0.0
-        for operator in operatorStats[username]['operator_records']:
-            timeSumMin = timeSumMin + (operator['stats']['playtime'] / 60)
-            timeSumMinInv = timeSumMinInv + (1 / (operator['stats']['playtime'] / 60))
-        print("Total played, {} min, inv: {}".format(timeSumMin, timeSumMinInv))
+    defenseName = getRandomOperator(username, 'def')
+    attackName = getRandomOperator(username, 'atk')
 
-        selector = np.random.rand() * 100
-        sumInv = 0
-        for operator in operatorStats[username]['operator_records']:
-            print(operator)
-            operatorName = operator['operator']['name']
-            operatorTimeMin = operator['stats']['playtime']/60
-            operatorPercentage = 100 * (operatorTimeMin) / timeSumMin
-            operatorTimeMinInv = 1 / (operator['stats']['playtime'] / 60)
-            operatorPercentageInv = 100 * ((operatorTimeMinInv) / timeSumMinInv)
-            sumInv = sumInv + operatorPercentageInv
-
-            selector = selector - operatorPercentageInv
-            if (selector < 0.0):
-                return operatorName
-
-            #np.random.rand()
-            print("  Operator {}, playtime: {} min, percent: {}, invPercent: {}".format(operatorName, int(operatorTimeMin), operatorPercentage, operatorPercentageInv))
-
-        print(sumInv)
-
-    return "1"
+    return "D: " + defenseName + ", A: " + attackName
 
 
 class ServerRequestHandler(BaseHTTPRequestHandler):
