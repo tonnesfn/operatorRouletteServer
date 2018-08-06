@@ -1,10 +1,12 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import requests
 import re
 import json
 import pickle
 import os
-import numpy as np
 
 operatorStats = {}
 
@@ -31,15 +33,18 @@ def getRandomOperator(username, role):
         print("Invalid role specified!")
         return ""
 
+    names = []
+    roles = []
+    probabilities = []
+
     while(True):
         timeSumMin = 0.0
         timeSumMinInv = 0.0
         for operator in operatorStats[username]['operator_records']:
+
             timeSumMin = timeSumMin + (operator['stats']['playtime'] / 60)
             timeSumMinInv = timeSumMinInv + (1 / (operator['stats']['playtime'] / 60))
-        # print("Total played, {} min, inv: {}".format(timeSumMin, timeSumMinInv))
 
-        selector = np.random.rand() * 100
         sumInv = 0
         for operator in operatorStats[username]['operator_records']:
 
@@ -50,10 +55,23 @@ def getRandomOperator(username, role):
             operatorPercentageInv = 100 * ((operatorTimeMinInv) / timeSumMinInv)
             sumInv = sumInv + operatorPercentageInv
 
-            selector = selector - operatorPercentageInv
+            names.append(operatorName)
+            roles.append(operator['operator']['role'])
+            probabilities.append(operatorPercentageInv)
+
+        fig1, ax1 = plt.subplots()
+        ax1.pie(probabilities,labels=names, autopct='%1.1f%%',
+                shadow=True, startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+        plt.savefig(username+".pdf")
+
+        selector = np.random.rand() * 100
+        for idx, probability in enumerate(probabilities):
+            selector = selector - probability
             if selector < 0.0:
-                if operator['operator']['role'] == role:
-                    return operatorName
+                if roles[idx] == role:
+                    return names[idx]
 
 # This function returns the HTML for the given username
 def getUserString(username):
