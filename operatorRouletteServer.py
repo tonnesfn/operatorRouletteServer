@@ -9,12 +9,14 @@ import pickle
 import os
 from itertools import compress
 
+offset = 5000
 operatorStats = {}
 
 
 # This functions checks to see if the user has already been
 def get_player_stats(username):
     global operatorStats
+    global offset
 
     print(username + " is being looked up")
 
@@ -26,11 +28,42 @@ def get_player_stats(username):
         pickle.dump(operatorStats, outfile)
         outfile.close()
 
+        # Plot for username:
+
+        names = []
+        roles = []
+        probabilities = []
+
+        timeSumMinInv = 0.0
+        for operator in operatorStats[username]['operator_records']:
+            timeSumMinInv = timeSumMinInv + (1 / ((operator['stats']['playtime'] + offset) / 60))
+
+        for operator in operatorStats[username]['operator_records']:
+            operatorName = operator['operator']['name']
+            operatorTimeMinInv = 1 / ((operator['stats']['playtime'] + offset) / 60)
+            operatorPercentageInv = 100 * ((operatorTimeMinInv) / timeSumMinInv)
+
+            names.append(operatorName)
+            roles.append(operator['operator']['role'])
+            probabilities.append(operatorPercentageInv)
+
+        fig1, ax1 = plt.subplots()
+        ax1.pie(list(compress(probabilities, np.array(roles) == "atk")),labels=list(compress(names, np.array(roles) == "atk")), autopct='%1.1f%%', shadow=True, startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        plt.savefig(username+"_atk.pdf")
+        plt.close()
+
+        fig1, ax1 = plt.subplots()
+        ax1.pie(list(compress(probabilities, np.array(roles) == "def")),labels=list(compress(names, np.array(roles) == "def")), autopct='%1.1f%%', shadow=True, startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        plt.savefig(username + "_def.pdf")
+        plt.close()
+
     else:
         print("Error " + str(r.status_code))
 
 def getRandomOperator(username, role, banlist):
-    offset = 5000
+    global offset
 
     if role != "atk" and role != "def":
         print("Invalid role specified!")
@@ -45,30 +78,14 @@ def getRandomOperator(username, role, banlist):
         for operator in operatorStats[username]['operator_records']:
             timeSumMinInv = timeSumMinInv + (1 / ((operator['stats']['playtime'] + offset) / 60))
 
-        sumInv = 0
         for operator in operatorStats[username]['operator_records']:
             operatorName = operator['operator']['name']
             operatorTimeMinInv = 1 / ((operator['stats']['playtime'] + offset) / 60)
             operatorPercentageInv = 100 * ((operatorTimeMinInv) / timeSumMinInv)
-            sumInv = sumInv + operatorPercentageInv
 
             names.append(operatorName)
             roles.append(operator['operator']['role'])
             probabilities.append(operatorPercentageInv)
-
-        # Plot:
-        fig1, ax1 = plt.subplots()
-        ax1.pie(list(compress(probabilities, np.array(roles) == "atk")),labels=list(compress(names, np.array(roles) == "atk")), autopct='%1.1f%%', shadow=True, startangle=90)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        plt.savefig(username+"_atk.pdf")
-        plt.close()
-
-        fig1, ax1 = plt.subplots()
-        ax1.pie(list(compress(probabilities, np.array(roles) == "def")),labels=list(compress(names, np.array(roles) == "def")), autopct='%1.1f%%', shadow=True, startangle=90)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        plt.savefig(username + "_def.pdf")
-        plt.close()
-
 
         # Select operator:
         selector = np.random.rand() * 100
