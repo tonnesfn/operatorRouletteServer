@@ -29,7 +29,7 @@ def get_player_stats(username):
     else:
         print("Error " + str(r.status_code))
 
-def getRandomOperator(username, role):
+def getRandomOperator(username, role, banlist):
     offset = 5000
 
     if role != "atk" and role != "def":
@@ -57,7 +57,6 @@ def getRandomOperator(username, role):
             probabilities.append(operatorPercentageInv)
 
         # Plot:
-
         fig1, ax1 = plt.subplots()
         ax1.pie(list(compress(probabilities, np.array(roles) == "atk")),labels=list(compress(names, np.array(roles) == "atk")), autopct='%1.1f%%', shadow=True, startangle=90)
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
@@ -75,23 +74,24 @@ def getRandomOperator(username, role):
         selector = np.random.rand() * 100
         for idx, probability in enumerate(probabilities):
             selector = selector - probability
-            if selector < 0.0:
-                if roles[idx] == role:
-                    return names[idx]
+            if selector < 0.0 and roles[idx] == role and names[idx] not in banlist:
+                return names[idx]
+
 
 # This function returns the HTML for the given username
-def getUserString(username):
+def getOperators(username, role, number):
     global operatorStats
+
+    operators = []
 
     # Check if username statistics exists, and get it if they do not
     if username not in operatorStats.keys():
         get_player_stats(username)
 
-    defenseName = getRandomOperator(username, 'def')
-    attackName = getRandomOperator(username, 'atk')
+    for i in range(number):
+        operators.append(getRandomOperator(username, role, operators))
 
-    return "D: " + defenseName + ", A: " + attackName
-
+    return ', '.join(operators)
 
 class ServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -107,9 +107,18 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
             for command in commands:
                 if command.startswith("users"):
                     users = command.split('=')[1].split(',')
-                    returnMessage = ""
+                    returnMessage = "Attack: <br />"
+
+                    # Do attack:
                     for user in users:
-                        returnMessage = returnMessage + user + ": " + getUserString(user) + "<br />"
+                        returnMessage = returnMessage + " - " + user + ": " + getOperators(user, 'atk', 3) + "<br />"
+
+                    # Defense:
+                    returnMessage = returnMessage + "Defense: <br />"
+                    for user in users:
+                        returnMessage = returnMessage + " - " + user + ": " + getOperators(user, 'def', 3) + "<br />"
+
+
 
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
