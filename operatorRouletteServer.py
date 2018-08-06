@@ -115,8 +115,6 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
         global operatorStats
 
         if self.path != '/favicon.ico':
-            print("Got a get request: %s" % self.path)
-
             commands = re.split('\?|&', self.path)[1:]
 
             returnMessage = " "
@@ -128,14 +126,12 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
 
                     # Do attack:
                     for user in users:
-                        returnMessage = returnMessage + " - " + user + ": " + getOperators(user, 'atk', 3) + "<br />"
+                        returnMessage = returnMessage + " - " + user.lower() + ": " + getOperators(user.lower(), 'atk', 5) + "<br />"
 
                     # Defense:
                     returnMessage = returnMessage + "Defense: <br />"
                     for user in users:
-                        returnMessage = returnMessage + " - " + user + ": " + getOperators(user, 'def', 3) + "<br />"
-
-
+                        returnMessage = returnMessage + " - " + user.lower() + ": " + getOperators(user.lower(), 'def', 5) + "<br />"
 
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
@@ -146,7 +142,6 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
             return
 
     def do_POST(self):
-        print("Got a post request")
         self.send_response(500)
         self.end_headers()
         return
@@ -162,7 +157,7 @@ def run():
     else:
         operatorStats = {}
 
-    server_address = ('127.0.0.1', 8081)
+    server_address = ('192.168.1.6', 8081)
     httpd = HTTPServer(server_address, ServerRequestHandler)
     print('running server...')
     httpd.serve_forever()
