@@ -122,7 +122,7 @@ def getOperatorsHTML(username, role, number):
     returnString = ""
 
     for operator in operators:
-        returnString = returnString + '<img src="images/operators/' + operator + '.png" alt=' + operator + '/>'
+        returnString = returnString + '<img src="images/operators/' + operator + '.png" alt="' + operator + '" style="width:9vw; height:auto"/>'
 
     return returnString
 
@@ -157,18 +157,15 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
                 for command in commands:
                     if command.startswith("users"):
                         users = command.split('=')[1].split(',')
-                        returnMessage = returnMessage + "Attack: <br />"
 
-                        # Do attack:
                         for user in users:
-                            returnMessage = returnMessage + " - " + user.lower() + ": " + getOperatorsHTML(user.lower(), 'atk', 5) + "<br />"
+                            returnMessage += user.lower() + ":<br />"
+                            returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 95vw; display: block;">'
+                            returnMessage += getOperatorsHTML(user.lower(), 'atk', 5) + "<span style=\"margin-right:2.5vw; display:inline-block;\">&nbsp;</span>"
+                            returnMessage += getOperatorsHTML(user.lower(), 'def', 5) + "<br />"
+                            returnMessage += '</div>'
 
-                        # Defense:
-                        returnMessage = returnMessage + "Defense: <br />"
-                        for user in users:
-                            returnMessage = returnMessage + " - " + user.lower() + ": " + getOperatorsHTML(user.lower(), 'def', 5) + "<br />"
-
-                returnMessage = returnMessage + "\n</html>"
+                returnMessage += "\n</html>"
 
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
