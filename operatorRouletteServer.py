@@ -8,6 +8,7 @@ import json
 import pickle
 import os
 from itertools import compress
+import urllib
 
 offset = 5000
 operatorStats = {}
@@ -87,15 +88,18 @@ def getRandomOperator(username, role, banlist):
             roles.append(operator['operator']['role'])
             probabilities.append(operatorPercentageInv)
 
+        print(banlist)
+
         # Select operator:
         selector = np.random.rand() * 100
         for idx, probability in enumerate(probabilities):
             selector = selector - probability
             if selector < 0.0 and roles[idx] == role and names[idx] not in banlist:
+                print(names[idx])
                 return names[idx]
 
 
-# This function returns the HTML for the given username
+# This function returns a list of operators
 def getOperators(username, role, number):
     global operatorStats
 
@@ -108,38 +112,71 @@ def getOperators(username, role, number):
     for i in range(number):
         operators.append(getRandomOperator(username, role, operators))
 
-    return ', '.join(operators)
+
+    return operators
+
+
+def getOperatorsHTML(username, role, number):
+    operators = getOperators(username, role, number)
+
+    returnString = ""
+
+    for operator in operators:
+        returnString = returnString + '<img src="images/operators/' + operator + '.png" alt=' + operator + '/>'
+
+    return returnString
 
 class ServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         global operatorStats
 
         if self.path != '/favicon.ico':
-            commands = re.split('\?|&', self.path)[1:]
 
-            returnMessage = " "
+            if self.path.endswith(".png"):
 
-            for command in commands:
-                if command.startswith("users"):
-                    users = command.split('=')[1].split(',')
-                    returnMessage = "Attack: <br />"
+                try:
+                    with open(os.curdir + os.sep + urllib.parse.unquote(self.path), 'rb') as file:
+                        f = file.read()
+                    mimetype = 'image/png'
+                    self.send_response(200)
+                    self.send_header('Content-type', mimetype)
+                    self.end_headers()
 
-                    # Do attack:
-                    for user in users:
-                        returnMessage = returnMessage + " - " + user.lower() + ": " + getOperators(user.lower(), 'atk', 5) + "<br />"
+                    self.wfile.write(f)
 
-                    # Defense:
-                    returnMessage = returnMessage + "Defense: <br />"
-                    for user in users:
-                        returnMessage = returnMessage + " - " + user.lower() + ": " + getOperators(user.lower(), 'def', 5) + "<br />"
+                except OSError as e:
+                    print(e)
+                    self.send_response(404)
+                    self.end_headers()
 
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
+            else:
+                commands = re.split('\?|&', self.path)[1:]
 
-            # Write content as utf-8 data
-            self.wfile.write(bytes(returnMessage, "utf8"))
-            return
+                returnMessage = "<html> <head> <meta charset=\"UTF-8\"> </head>\n"
+
+                for command in commands:
+                    if command.startswith("users"):
+                        users = command.split('=')[1].split(',')
+                        returnMessage = returnMessage + "Attack: <br />"
+
+                        # Do attack:
+                        for user in users:
+                            returnMessage = returnMessage + " - " + user.lower() + ": " + getOperatorsHTML(user.lower(), 'atk', 5) + "<br />"
+
+                        # Defense:
+                        returnMessage = returnMessage + "Defense: <br />"
+                        for user in users:
+                            returnMessage = returnMessage + " - " + user.lower() + ": " + getOperatorsHTML(user.lower(), 'def', 5) + "<br />"
+
+                returnMessage = returnMessage + "\n</html>"
+
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
+                # Write content as utf-8 data
+                self.wfile.write(bytes(returnMessage, "utf8"))
+                return
 
     def do_POST(self):
         self.send_response(500)
@@ -157,7 +194,7 @@ def run():
     else:
         operatorStats = {}
 
-    server_address = ('192.168.1.6', 8081)
+    server_address = ('localhost', 8081)
     httpd = HTTPServer(server_address, ServerRequestHandler)
     print('running server...')
     httpd.serve_forever()
