@@ -88,14 +88,11 @@ def getRandomOperator(username, role, banlist):
             roles.append(operator['operator']['role'])
             probabilities.append(operatorPercentageInv)
 
-        print(banlist)
-
         # Select operator:
         selector = np.random.rand() * 100
         for idx, probability in enumerate(probabilities):
             selector = selector - probability
             if selector < 0.0 and roles[idx] == role and names[idx] not in banlist:
-                print(names[idx])
                 return names[idx]
 
 
@@ -111,20 +108,8 @@ def getOperators(username, role, number):
 
     for i in range(number):
         operators.append(getRandomOperator(username, role, operators))
-
-
     return operators
 
-
-def getOperatorsHTML(username, role, number):
-    operators = getOperators(username, role, number)
-
-    returnString = ""
-
-    for operator in operators:
-        returnString = returnString + '<img src="images/operators/' + operator + '.png" alt="' + operator + '" style="width:9vw; height:auto"/>'
-
-    return returnString
 
 class ServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -152,20 +137,52 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
             else:
                 commands = re.split('\?|&', self.path)[1:]
 
-                returnMessage = "<html> <head> <meta charset=\"UTF-8\"> </head>\n"
+                returnMessage = "<html> <head> <meta charset=\"UTF-8\"> </head> <body style=\"background-color: #151618\">\n"
 
                 for command in commands:
                     if command.startswith("users"):
                         users = command.split('=')[1].split(',')
 
+                        # Get operator images:
                         for user in users:
-                            returnMessage += user.lower() + ":<br />"
-                            returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 95vw; display: block;">'
-                            returnMessage += getOperatorsHTML(user.lower(), 'atk', 5) + "<span style=\"margin-right:2.5vw; display:inline-block;\">&nbsp;</span>"
-                            returnMessage += getOperatorsHTML(user.lower(), 'def', 5) + "<br />"
+                            attack = getOperators(user.lower(), 'atk', 5)
+                            defence = getOperators(user.lower(), 'def', 5)
+
+                            # User div
+                            returnMessage += '<div style="margin-bottom: 25px">'
+
+                            # Print username
+                            returnMessage += '<div style="padding-bottom: 10px; margin: 0px; margin-left: auto; margin-right: auto; width: 90vw; display: block; text-align: center; color: white; font-size: 5.9vw;">' + user.lower() + "</div>"
+
+                            # Print images
+                            returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 90vw; display: block;">'
+                            for op in attack:
+                                returnMessage += '<img src="http://robotikk.net/R6/images/operators/' + op + '.png" alt="' + op + '" style="width:8vw; height:auto"/>'
+
+                            returnMessage += "<span style=\"margin-right:4vw; display:inline-block;\"></span>"
+
+                            for op in defence:
+                                returnMessage += '<img src="http://robotikk.net/R6/images/operators/' + op + '.png" alt="' + op + '" style="width:9vw; height:auto"/>'
+
                             returnMessage += '</div>'
 
-                returnMessage += "\n</html>"
+                            # Print operator names
+                            returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 90vw; display: block; font-size: 2.0vw;">'
+                            for op in attack:
+                                returnMessage += '<div style="width:8vw; display:inline-block; text-align:center; color: white;">' + op + '</div>'
+
+                            returnMessage += "<span style=\"margin-right:4vw; display:inline-block;\"></span>"
+
+                            for op in defence:
+                                returnMessage += '<div style="width:9vw; display:inline-block; text-align:center; color: white; font-size: 2.0vw;">' + op + '</div>'
+
+                            # Close op name div
+                            returnMessage += '</div>'
+
+                            # Close user div
+                            returnMessage += '</div>'
+
+                returnMessage += "\n</body></html>"
 
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
@@ -191,7 +208,7 @@ def run():
     else:
         operatorStats = {}
 
-    server_address = ('localhost', 8081)
+    server_address = ('192.168.1.6', 8081)
     httpd = HTTPServer(server_address, ServerRequestHandler)
     print('running server...')
     httpd.serve_forever()
