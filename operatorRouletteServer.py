@@ -111,6 +111,13 @@ def getOperators(username, role, number):
     return operators
 
 
+def getUsernameBarHtml(users):
+    if len(users) != 0:
+        userString = ",".join(users) + ','
+    else:
+        userString = ''
+    return '<br /><div style="margin-left: auto; margin-right: auto; width: 250px"><form oninput="users.value = \'' + userString + '\' + latest.value" action="/" onsubmit="latest.name = \'\'" method="get"> <input type="text" name="latest" placeholder="Username"><input type="hidden" name="users"><input type="submit" value="Add"></form></div>'
+
 class ServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         global operatorStats
@@ -135,9 +142,11 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
                     self.end_headers()
 
             else:
-                commands = re.split('\?|&', self.path)[1:]
+                commands = re.split('\?|&', urllib.parse.unquote(self.path))[1:]
 
                 returnMessage = "<html> <head> <meta charset=\"UTF-8\"> </head> <body style=\"background-color: #151618\">\n"
+
+                users = []
 
                 for command in commands:
                     if command.startswith("users"):
@@ -181,6 +190,10 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
 
                             # Close user div
                             returnMessage += '</div>'
+
+                        # Add user selection bar:
+
+                returnMessage += getUsernameBarHtml(users)
 
                 returnMessage += "\n</body></html>"
 
