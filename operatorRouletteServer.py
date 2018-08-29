@@ -60,6 +60,8 @@ def get_player_stats(username):
         plt.savefig(username + "_def.pdf")
         plt.close()
 
+        print(username + " done")
+
     else:
         print("Error " + str(r.status_code))
 
@@ -96,15 +98,13 @@ def getRandomOperator(username, role, banlist):
                 return names[idx]
 
 
+
+
 # This function returns a list of operators
 def getOperators(username, role, number):
     global operatorStats
 
     operators = []
-
-    # Check if username statistics exists, and get it if they do not
-    if username not in operatorStats.keys():
-        get_player_stats(username)
 
     for i in range(number):
         operators.append(getRandomOperator(username, role, operators))
@@ -120,7 +120,7 @@ def getControlBar(users, autoRefresh):
         userString = ''
 
     # Add user form
-    returnString += '<br /><div style="margin-left: auto; margin-right: auto; width: 500px"><form oninput="users.value = \'' + userString + '\' + latest.value" action="/" onsubmit="latest.name = \'\'" method="get"> <input type="text" name="latest" placeholder="Username"><input type="hidden" name="users"><input type="submit" value="Add">'
+    returnString += '<br /><div style="margin-left: auto; margin-right: auto; width: 360px"><form oninput="users.value = \'' + userString + '\' + latest.value" action="/" onsubmit="latest.name = \'\'" method="get"> <input type="text" name="latest" placeholder="Username"><input type="hidden" name="users"><input type="submit" value="Add">'
 
     # Auto refresh button
     if autoRefresh:
@@ -157,17 +157,25 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
             else:
                 commands = re.split('\?|&', urllib.parse.unquote(self.path))[1:]
 
-                # Auto refresh feature:
+                # Auto refresh feature, enabled on user request or unknown operator:
                 autoRefresh = False
                 for command in commands:
                     if command.startswith("autorefresh"):
                         autoRefresh = True
+                    if command.startswith("users"):
+                        users = command.split('=')[1].split(',')
+
+                        # Get operator images:
+                        for user in users:
+                            if user.lower() not in operatorStats.keys():
+                                autoRefresh = True
 
                 returnMessage = "<html> <head> <meta charset=\"UTF-8\">"
                 if autoRefresh: returnMessage += '<meta http-equiv="refresh" content="60" >'
                 returnMessage += "</head> <body style=\"background-color: #151618\">\n"
 
                 users = []
+                unknownUsers = []
 
                 for command in commands:
                     if command.startswith("users"):
@@ -175,42 +183,47 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
 
                         # Get operator images:
                         for user in users:
-                            attack = getOperators(user.lower(), 'atk', 5)
-                            defence = getOperators(user.lower(), 'def', 5)
+                            if user.lower() not in operatorStats.keys():
+                                returnMessage += '<div style="padding-bottom: 10px; margin: 0px; margin-left: auto; margin-right: auto; width: 90vw; display: block; text-align: center; color: white; font-size: 5.9vw;">' + user.lower() + "</div>"
+                                returnMessage += '<div style="padding-bottom: 10px; margin: 0px; margin-left: auto; margin-right: auto; width: 90vw; display: block; text-align: center; color: gray; font-size: 3vw;">Stats being pulled, please be patient</div>'
+                                unknownUsers.append(user.lower())
+                            else:
+                                attack = getOperators(user.lower(), 'atk', 5)
+                                defence = getOperators(user.lower(), 'def', 5)
 
-                            # User div
-                            returnMessage += '<div style="margin-bottom: 25px">'
+                                # User div
+                                returnMessage += '<div style="margin-bottom: 25px">'
 
-                            # Print username
-                            returnMessage += '<div style="padding-bottom: 10px; margin: 0px; margin-left: auto; margin-right: auto; width: 90vw; display: block; text-align: center; color: white; font-size: 5.9vw;">' + user.lower() + "</div>"
+                                # Print username
+                                returnMessage += '<div style="padding-bottom: 10px; margin: 0px; margin-left: auto; margin-right: auto; width: 90vw; display: block; text-align: center; color: white; font-size: 5.9vw;">' + user.lower() + "</div>"
 
-                            # Print images
-                            returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 90vw; display: block;">'
-                            for op in attack:
-                                returnMessage += '<img src="http://robotikk.net/R6/images/operators/' + op + '.png" alt="' + op + '" style="width:8vw; height:auto"/>'
+                                # Print images
+                                returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 90vw; display: block;">'
+                                for op in attack:
+                                    returnMessage += '<img src="http://robotikk.net/R6/images/operators/' + op + '.png" alt="' + op + '" style="width:8vw; height:auto"/>'
 
-                            returnMessage += "<span style=\"margin-right:4vw; display:inline-block;\"></span>"
+                                returnMessage += "<span style=\"margin-right:4vw; display:inline-block;\"></span>"
 
-                            for op in defence:
-                                returnMessage += '<img src="http://robotikk.net/R6/images/operators/' + op + '.png" alt="' + op + '" style="width:9vw; height:auto"/>'
+                                for op in defence:
+                                    returnMessage += '<img src="http://robotikk.net/R6/images/operators/' + op + '.png" alt="' + op + '" style="width:9vw; height:auto"/>'
 
-                            returnMessage += '</div>'
+                                returnMessage += '</div>'
 
-                            # Print operator names
-                            returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 90vw; display: block; font-size: 2.0vw;">'
-                            for op in attack:
-                                returnMessage += '<div style="width:8vw; display:inline-block; text-align:center; color: white;">' + op + '</div>'
+                                # Print operator names
+                                returnMessage += '<div style="margin-left: auto; margin-right: auto; width: 90vw; display: block; font-size: 2.0vw;">'
+                                for op in attack:
+                                    returnMessage += '<div style="width:8vw; display:inline-block; text-align:center; color: white;">' + op + '</div>'
 
-                            returnMessage += "<span style=\"margin-right:4vw; display:inline-block;\"></span>"
+                                returnMessage += "<span style=\"margin-right:4vw; display:inline-block;\"></span>"
 
-                            for op in defence:
-                                returnMessage += '<div style="width:9vw; display:inline-block; text-align:center; color: white; font-size: 2.0vw;">' + op + '</div>'
+                                for op in defence:
+                                    returnMessage += '<div style="width:9vw; display:inline-block; text-align:center; color: white; font-size: 2.0vw;">' + op + '</div>'
 
-                            # Close op name div
-                            returnMessage += '</div>'
+                                # Close op name div
+                                returnMessage += '</div>'
 
-                            # Close user div
-                            returnMessage += '</div>'
+                                # Close user div
+                                returnMessage += '</div>'
 
                 # Add user selection bar:
                 returnMessage += getControlBar(users, autoRefresh)
@@ -223,6 +236,10 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
 
                 # Write content as utf-8 data
                 self.wfile.write(bytes(returnMessage, "utf8"))
+
+                # Refresh one user at a time due to refresh rate and sloooooow api calls
+                if len(unknownUsers) != 0:
+                    get_player_stats(unknownUsers[0])
                 return
 
     def do_POST(self):
