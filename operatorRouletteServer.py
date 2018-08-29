@@ -111,12 +111,25 @@ def getOperators(username, role, number):
     return operators
 
 
-def getUsernameBarHtml(users):
+def getControlBar(users, autoRefresh):
+    returnString = ""
+
     if len(users) != 0:
         userString = ",".join(users) + ','
     else:
         userString = ''
-    return '<br /><div style="margin-left: auto; margin-right: auto; width: 250px"><form oninput="users.value = \'' + userString + '\' + latest.value" action="/" onsubmit="latest.name = \'\'" method="get"> <input type="text" name="latest" placeholder="Username"><input type="hidden" name="users"><input type="submit" value="Add"></form></div>'
+
+    # Add user form
+    returnString += '<br /><div style="margin-left: auto; margin-right: auto; width: 500px"><form oninput="users.value = \'' + userString + '\' + latest.value" action="/" onsubmit="latest.name = \'\'" method="get"> <input type="text" name="latest" placeholder="Username"><input type="hidden" name="users"><input type="submit" value="Add">'
+
+    # Auto refresh button
+    if autoRefresh:
+        returnString += '<button style="margin-left: 10px"; type = "button" onclick = "location.href = \'/?users=' + userString[:-1] + '\';">Disable autorefresh</button>'
+    else:
+        returnString += '<button style="margin-left: 10px"; type = "button" onclick = "location.href = \'/?autorefresh=true&users=' + userString[:-1] + '\';">Enable autorefresh</button>'
+    returnString += '</form></div>'
+
+    return returnString
 
 class ServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -144,7 +157,15 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
             else:
                 commands = re.split('\?|&', urllib.parse.unquote(self.path))[1:]
 
-                returnMessage = "<html> <head> <meta charset=\"UTF-8\"> </head> <body style=\"background-color: #151618\">\n"
+                # Auto refresh feature:
+                autoRefresh = False
+                for command in commands:
+                    if command.startswith("autorefresh"):
+                        autoRefresh = True
+
+                returnMessage = "<html> <head> <meta charset=\"UTF-8\">"
+                if autoRefresh: returnMessage += '<meta http-equiv="refresh" content="60" >'
+                returnMessage += "</head> <body style=\"background-color: #151618\">\n"
 
                 users = []
 
@@ -191,9 +212,8 @@ class ServerRequestHandler(BaseHTTPRequestHandler):
                             # Close user div
                             returnMessage += '</div>'
 
-                        # Add user selection bar:
-
-                returnMessage += getUsernameBarHtml(users)
+                # Add user selection bar:
+                returnMessage += getControlBar(users, autoRefresh)
 
                 returnMessage += "\n</body></html>"
 
